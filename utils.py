@@ -47,7 +47,7 @@ def generate_sequence(timeseries, seq_len, log_mode=False):
 
 
 
-def plt_lmbda(timeseries, model, seq_len, log_mode=False, dt=0.01, lmbda0=0.2, alpha=0.8, beta=1.0):
+def plt_lmbda(timeseries, model, seq_len, log_mode=False, dt=0.01, lmbda0=0., alpha=0.01, beta=1.0):
 
     lmbda_dict = dict()
     pred_dict = dict()
@@ -71,6 +71,6 @@ def plt_lmbda(timeseries, model, seq_len, log_mode=False, dt=0.01, lmbda0=0.2, a
 
     plt.plot(t_span, lmbda_dict[0], color='green', label='true prob')
     plt.plot([t for t, e in timeseries][seq_len-1:], np.array(pred_dict[0].detach()), color='olive', label='pred prob')
-    plt.scatter([t for t, e in timeseries], [-1 for _ in timeseries], color='blue', label='events')
+    plt.scatter([t for t, e in timeseries], [-.01 for _ in timeseries], color='blue', label='events')
     plt.legend()
     plt.show()

@@ -1,3 +1,4 @@
+/default/
 
 # Created by https://www.gitignore.io/api/linux,python,windows,jupyternotebook
 
@@ -147,5 +148,4 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.gitignore.io/api/linux,python,windows,jupyternotebook
-.demo_cache.sqlite
-demo_cache.sqlite
+

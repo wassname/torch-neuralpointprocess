@@ -1,6 +1,9 @@
 Modified by wassname from the below:
 
 Changes:
+- [ ] clamp weight with epsilon for stablity
+  - from `p.data *= (p.data>=0)`
+  - to `p.data = torch.clamp(p.data, min=eps)`
 - [ ] try log t
 - [ ] try not mean as much in intensity layer
 - [ ] use pytorch lightning

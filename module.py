@@ -3,7 +3,7 @@ from torch import nn
 from torch.autograd import grad
 from torch.optim import Adam
 from torch.nn import functional as F
-from optimization import BertAdam
+# from optimization import BertAdam
 
 from matplotlib import pyplot as plt
 
@@ -21,12 +21,20 @@ class IntensityNet(nn.Module):
         self.mean_first = config.mean_first
         self.log_t = config.log_t
 
+        self.init_weights_positive()
+
+    def init_weights_positive(self):
+        eps = 1e-10
+        for p in self.parameters():
+            p.data = torch.abs(p.data)
+            p.data = torch.clamp(p.data, min=eps)
+
 
     def forward(self, hidden_state, target_time):
         eps = 1e-10
 
         for p in self.parameters():
-            p.data *= (p.data>=0)
+            p.data = torch.clamp(p.data, min=eps)
 
         target_time.requires_grad_(True)
         if self.log_t:
@@ -53,6 +61,7 @@ class IntensityNet(nn.Module):
 
         return [nll, log_lmbda_mean, int_lmbda_mean, lmbda]
 
+LEAK=1
 class GTPP(nn.Module):
 
     def __init__(self, config):
@@ -66,22 +75,22 @@ class GTPP(nn.Module):
 
         self.embedding = nn.Embedding(num_embeddings=config.event_class, embedding_dim=config.emb_dim)
         self.emb_drop = nn.Dropout(p=config.dropout)
-        self.lstm = nn.LSTM(input_size=1+config.emb_dim,
+        self.lstm = nn.LSTM(input_size=LEAK+config.emb_dim,
                             hidden_size=config.hid_dim,
                             batch_first=True,
                             bidirectional=False)
         self.intensity_net = IntensityNet(config)
-        self.set_optimizer(total_step=1)
+        # self.set_optimizer(total_step=1)
 
 
-    def set_optimizer(self, total_step, use_bert=False):
-        if use_bert:
-            self.set_optimizer = BertAdam(params=self.parameters(),
-                                          lr=self.lr,
-                                          warmup=0.1,
-                                          t_total=total_step)
-        else:
-            self.set_optimizer = Adam(self.parameters(), lr=self.lr)
+    # def set_optimizer(self, total_step, use_bert=False):
+    #     if use_bert:
+    #         self.set_optimizer = BertAdam(params=self.parameters(),
+    #                                       lr=self.lr,
+    #                                       warmup=0.1,
+    #                                       t_total=total_step)
+    #     else:
+    #         self.set_optimizer = Adam(self.parameters(), lr=self.lr)
 
 
     def forward(self, batch):
@@ -89,31 +98,27 @@ class GTPP(nn.Module):
         event_seq = event_seq.long()
         emb = self.embedding(event_seq)
         emb = self.emb_drop(emb)
-        lstm_input = torch.cat([emb, time_seq.unsqueeze(-1)], dim=-1)
+        if LEAK:
+            lstm_input = torch.cat([emb[:, :-1], time_seq[:, :-1].unsqueeze(-1)], dim=-1)
+        else:
+            lstm_input = emb
         hidden_state, _ = self.lstm(lstm_input)
 
+        # FIXME wait we pass the target time into the LSTM. Is this data leakage?
         nll, log_lmbda, int_lmbda, lmbda = self.intensity_net(hidden_state, time_seq[:, -1])
 
         return [nll, log_lmbda.detach(), int_lmbda.detach(), lmbda.detach()]
 
 
-    def train_batch(self, batch):
+    # def train_batch(self, batch):
 
-        self.set_optimizer.zero_grad()
-        nll, log_lmbda, int_lmbda, lmbda = self.forward(batch)
-        loss = nll
-        loss.backward()
-        self.set_optimizer.step()
+    #     self.set_optimizer.zero_grad()
+    #     nll, log_lmbda, int_lmbda, lmbda = self.forward(batch)
+    #     loss = nll
+    #     loss.backward()
+    #     self.set_optimizer.step()
 
-        return nll.item(), log_lmbda.item(), int_lmbda.item(), lmbda
-
-
-
-
-
-
-
-
+    #     return nll.item(), log_lmbda.item(), int_lmbda.item(), lmbda
 
 
 

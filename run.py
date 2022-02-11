@@ -38,76 +38,76 @@ def get_parser():
     parser.add_argument("--mean_first", action="store_true", help="in model take mean first")
     return parser
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    parser = get_parser()
-
-
-    config = parser.parse_args()
-
-    path = 'data/'
-
-    if config.data == 'exponential_hawkes':
-
-        train_data = read_timeseries(path + config.data + '_training.csv')
-        val_data = read_timeseries(path + config.data + '_validation.csv')
-        test_data = read_timeseries(path + config.data + '_testing.csv')
-    else:
-        raise NotImplemented('only exponential_hawkes')
+#     parser = get_parser()
 
 
+#     config = parser.parse_args()
 
-    train_timeseq, train_eventseq = generate_sequence(train_data, config.seq_len, log_mode=config.log_mode)
-    train_loader = DataLoader(torch.utils.data.TensorDataset(train_timeseq, train_eventseq), shuffle=True, batch_size=config.batch_size)
-    val_timeseq, val_eventseq = generate_sequence(val_data, config.seq_len, log_mode=config.log_mode)
-    val_loader = DataLoader(torch.utils.data.TensorDataset(val_timeseq, val_eventseq), shuffle=False, batch_size=len(val_data))
+#     path = 'data/'
 
-    model = GTPP(config)
+#     if config.data == 'exponential_hawkes':
 
-    best_loss = 1e3
-    patients = 0
-    tol = 30
-
-    for epoch in range(config.epochs):
-
-        model.train()
-
-        loss1 = loss2 = loss3 = 0
-
-        for batch in train_loader:
-            loss, log_lmbda, int_lmbda, lmbda = model.train_batch(batch)
-
-            loss1 += loss
-            loss2 += log_lmbda
-            loss3 += int_lmbda
+#         train_data = read_timeseries(path + config.data + '_training.csv')
+#         val_data = read_timeseries(path + config.data + '_validation.csv')
+#         test_data = read_timeseries(path + config.data + '_testing.csv')
+#     else:
+#         raise NotImplemented('only exponential_hawkes')
 
 
-        model.eval()
 
-        for batch in val_loader:
-            val_loss, val_log_lmbda, val_int_lmbda, _ = model(batch)
+#     train_timeseq, train_eventseq = generate_sequence(train_data, config.seq_len, log_mode=config.log_mode)
+#     train_loader = DataLoader(torch.utils.data.TensorDataset(train_timeseq, train_eventseq), shuffle=True, batch_size=config.batch_size)
+#     val_timeseq, val_eventseq = generate_sequence(val_data, config.seq_len, log_mode=config.log_mode)
+#     val_loader = DataLoader(torch.utils.data.TensorDataset(val_timeseq, val_eventseq), shuffle=False, batch_size=len(val_data))
 
-        if best_loss > val_loss:
-            best_loss = val_loss.item()
-        else:
-            patients += 1
-            if patients >= tol:
-                print("Early Stop")
-                print("epoch", epoch)
-                plt_lmbda(train_data[0], model=model, seq_len=config.seq_len, log_mode=config.log_mode)
-                break
+#     model = GTPP(config)
 
-        if epoch % config.prt_evry == 0:
-            print("Epochs:{}".format(epoch))
-            print("Training Negative Log Likelihood:{}   Log Lambda:{}:   Integral Lambda:{}".format(loss1/train_timeseq.size(0), -loss2 / train_timeseq.size(0), loss3 / train_timeseq.size(0)))
-            print("Validation Negative Log Likelihood:{}   Log Lambda:{}:   Integral Lambda:{}".format(val_loss / val_timeseq.size(0),
-                                                                                            -val_log_lmbda / val_timeseq.size(0),
-                                                                                            val_int_lmbda/val_timeseq.size(0)))
-            plt_lmbda(train_data[0], model=model, seq_len=config.seq_len, log_mode=config.log_mode)
-            # plt_lmbda(test_data[0], model=model, seq_len=config.seq_len, log_mode=config.log_mode)
+#     best_loss = 1e3
+#     patients = 0
+#     tol = 30
+
+#     for epoch in range(config.epochs):
+
+#         model.train()
+
+#         loss1 = loss2 = loss3 = 0
+
+#         for batch in train_loader:
+#             loss, log_lmbda, int_lmbda, lmbda = model.train_batch(batch)
+
+#             loss1 += loss
+#             loss2 += log_lmbda
+#             loss3 += int_lmbda
 
 
-    print("end")
+#         model.eval()
+
+#         for batch in val_loader:
+#             val_loss, val_log_lmbda, val_int_lmbda, _ = model(batch)
+
+#         if best_loss > val_loss:
+#             best_loss = val_loss.item()
+#         else:
+#             patients += 1
+#             if patients >= tol:
+#                 print("Early Stop")
+#                 print("epoch", epoch)
+#                 plt_lmbda(train_data[0], model=model, seq_len=config.seq_len, log_mode=config.log_mode)
+#                 break
+
+#         if epoch % config.prt_evry == 0:
+#             print("Epochs:{}".format(epoch))
+#             print("Training Negative Log Likelihood:{}   Log Lambda:{}:   Integral Lambda:{}".format(loss1/train_timeseq.size(0), -loss2 / train_timeseq.size(0), loss3 / train_timeseq.size(0)))
+#             print("Validation Negative Log Likelihood:{}   Log Lambda:{}:   Integral Lambda:{}".format(val_loss / val_timeseq.size(0),
+#                                                                                             -val_log_lmbda / val_timeseq.size(0),
+#                                                                                             val_int_lmbda/val_timeseq.size(0)))
+#             plt_lmbda(train_data[0], model=model, seq_len=config.seq_len, log_mode=config.log_mode)
+#             # plt_lmbda(test_data[0], model=model, seq_len=config.seq_len, log_mode=config.log_mode)
+
+
+#     print("end")
 
 
 
