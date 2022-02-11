@@ -18,26 +18,40 @@ class IntensityNet(nn.Module):
         self.module_list = nn.ModuleList([nn.Linear(in_features=config.mlp_dim, out_features=config.mlp_dim) for _ in range(config.mlp_layer-1)])
         self.linear3 =  nn.Sequential(nn.Linear(in_features=config.mlp_dim, out_features=1), nn.Softplus())
 
+        self.mean_first = config.mean_first
+        self.log_t = config.log_t
 
 
     def forward(self, hidden_state, target_time):
+        eps = 1e-10
 
         for p in self.parameters():
             p.data *= (p.data>=0)
 
         target_time.requires_grad_(True)
+        if self.log_t:
+            target_time = torch.log(target_time+eps)
         t = self.linear1(target_time.unsqueeze(dim=-1))
 
-        out = F.tanh(self.linear2(torch.cat([hidden_state[:,-1,:], t], dim=-1)))
+        out = torch.tanh(self.linear2(torch.cat([hidden_state[:,-1,:], t], dim=-1)))
         for layer in self.module_list:
-            out = F.tanh(layer(out))
+            out = torch.tanh(layer(out))
         int_lmbda = F.softplus(self.linear3(out))
-        int_lmbda = torch.mean(int_lmbda)
+        int_lmbda_mean = int_lmbda.mean()
 
-        lmbda = grad(int_lmbda, target_time, create_graph=True, retain_graph=True)[0]
-        nll = torch.add(int_lmbda, -torch.mean(torch.log((lmbda+1e-10))))
+        lmbda = grad(
+            int_lmbda.mean(), 
+            target_time, 
+            create_graph=True, retain_graph=True)[0]
+        log_lmbda = (lmbda + eps).log()
+        log_lmbda_mean = log_lmbda.mean()
 
-        return [nll, torch.mean(torch.log((lmbda+1e-10))), int_lmbda, lmbda]
+        if self.mean_first:
+            nll = int_lmbda_mean - log_lmbda_mean
+        else:
+            nll = (int_lmbda - log_lmbda).mean()        
+
+        return [nll, log_lmbda_mean, int_lmbda_mean, lmbda]
 
 class GTPP(nn.Module):
 
@@ -47,7 +61,7 @@ class GTPP(nn.Module):
 
         self.batch_size = config.batch_size
         self.lr = config.lr
-        self.log_mode = config.log_mode
+        self.log_mode = config.log_mode # TODO mean to be used here?
 
 
         self.embedding = nn.Embedding(num_embeddings=config.event_class, embedding_dim=config.emb_dim)
@@ -80,7 +94,7 @@ class GTPP(nn.Module):
 
         nll, log_lmbda, int_lmbda, lmbda = self.intensity_net(hidden_state, time_seq[:, -1])
 
-        return [nll, log_lmbda, int_lmbda, lmbda]
+        return [nll, log_lmbda.detach(), int_lmbda.detach(), lmbda.detach()]
 
 
     def train_batch(self, batch):

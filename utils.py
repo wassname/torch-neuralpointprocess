@@ -56,9 +56,7 @@ def plt_lmbda(timeseries, model, seq_len, log_mode=False, dt=0.01, lmbda0=0.2, a
     # exponential_hwakes : lmbda0, alpha, beta: 0.2, 0.8, 1.0
     # lmbda = lambda0 + alpha*sum(exp{-beta*(t-t_i)})
 
-
     lmbda_dict[0] = np.zeros(t_span.shape)
-
 
     for t, e in timeseries:
         target = (t_span > t)
@@ -71,7 +69,8 @@ def plt_lmbda(timeseries, model, seq_len, log_mode=False, dt=0.01, lmbda0=0.2, a
     _, _, _, pred_dict[0] = model((test_timeseq, test_eventseq))
 
 
-    plt.plot(t_span, lmbda_dict[0], color='green')
-    plt.plot([t for t, e in timeseries][seq_len-1:], np.array(pred_dict[0].detach()), color='olive')
-    plt.scatter([t for t, e in timeseries], [-1 for _ in timeseries], color='blue')
+    plt.plot(t_span, lmbda_dict[0], color='green', label='true prob')
+    plt.plot([t for t, e in timeseries][seq_len-1:], np.array(pred_dict[0].detach()), color='olive', label='pred prob')
+    plt.scatter([t for t, e in timeseries], [-1 for _ in timeseries], color='blue', label='events')
+    plt.legend()
     plt.show()

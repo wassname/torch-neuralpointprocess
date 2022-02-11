@@ -1,3 +1,11 @@
+Modified by wassname from the below:
+
+Changes:
+- [ ] try log t
+- [ ] try not mean as much in intensity layer
+- [ ] use pytorch lightning
+
+
 # Fully Neural Network based Model for General Temporal Point Process(Neurips 2019,Takahiro Omi)
 
 This code is pytorch version of implementation for Neural Temporal Point Process.
