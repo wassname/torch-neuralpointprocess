@@ -3,7 +3,6 @@ from torch import nn
 from torch.autograd import grad
 from torch.optim import Adam
 from torch.nn import functional as F
-# from optimization import BertAdam
 
 from matplotlib import pyplot as plt
 
@@ -61,7 +60,7 @@ class IntensityNet(nn.Module):
 
         return [nll, log_lmbda_mean, int_lmbda_mean, lmbda]
 
-LEAK=1
+
 class GTPP(nn.Module):
 
     def __init__(self, config):
@@ -70,27 +69,16 @@ class GTPP(nn.Module):
 
         self.batch_size = config.batch_size
         self.lr = config.lr
-        self.log_mode = config.log_mode # TODO mean to be used here?
+        self.log_mode = config.log_mode # TODO meant to be used here?
 
 
         self.embedding = nn.Embedding(num_embeddings=config.event_class, embedding_dim=config.emb_dim)
         self.emb_drop = nn.Dropout(p=config.dropout)
-        self.lstm = nn.LSTM(input_size=LEAK+config.emb_dim,
+        self.lstm = nn.LSTM(input_size=1+config.emb_dim,
                             hidden_size=config.hid_dim,
                             batch_first=True,
                             bidirectional=False)
         self.intensity_net = IntensityNet(config)
-        # self.set_optimizer(total_step=1)
-
-
-    # def set_optimizer(self, total_step, use_bert=False):
-    #     if use_bert:
-    #         self.set_optimizer = BertAdam(params=self.parameters(),
-    #                                       lr=self.lr,
-    #                                       warmup=0.1,
-    #                                       t_total=total_step)
-    #     else:
-    #         self.set_optimizer = Adam(self.parameters(), lr=self.lr)
 
 
     def forward(self, batch):
@@ -98,27 +86,10 @@ class GTPP(nn.Module):
         event_seq = event_seq.long()
         emb = self.embedding(event_seq)
         emb = self.emb_drop(emb)
-        if LEAK:
-            lstm_input = torch.cat([emb[:, :-1], time_seq[:, :-1].unsqueeze(-1)], dim=-1)
-        else:
-            lstm_input = emb
+        lstm_input = torch.cat([emb[:, :-1], time_seq[:, :-1].unsqueeze(-1)], dim=-1)
         hidden_state, _ = self.lstm(lstm_input)
 
-        # FIXME wait we pass the target time into the LSTM. Is this data leakage?
         nll, log_lmbda, int_lmbda, lmbda = self.intensity_net(hidden_state, time_seq[:, -1])
 
         return [nll, log_lmbda.detach(), int_lmbda.detach(), lmbda.detach()]
-
-
-    # def train_batch(self, batch):
-
-    #     self.set_optimizer.zero_grad()
-    #     nll, log_lmbda, int_lmbda, lmbda = self.forward(batch)
-    #     loss = nll
-    #     loss.backward()
-    #     self.set_optimizer.step()
-
-    #     return nll.item(), log_lmbda.item(), int_lmbda.item(), lmbda
-
-
 
