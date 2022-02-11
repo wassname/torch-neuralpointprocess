@@ -1,12 +1,14 @@
 Modified by wassname from the below:
 
 Changes:
-- [ ] clamp weight with epsilon for stablity
+- [x] clamp weight with epsilon for stablity
   - from `p.data *= (p.data>=0)`
   - to `p.data = torch.clamp(p.data, min=eps)`
 - [ ] try log t
-- [ ] try not mean as much in intensity layer
-- [ ] use pytorch lightning
+- [x] try not mean as much in intensity layer
+- [x] use pytorch lightning
+- [x] fix potential data leak where label is fed to lsm
+- [x] commit notebook with plots of val
 
 
 # Fully Neural Network based Model for General Temporal Point Process(Neurips 2019,Takahiro Omi)
